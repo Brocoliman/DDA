@@ -4,9 +4,9 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
+import java.util.Arrays;
 import java.util.stream.IntStream;
 
 
@@ -14,13 +14,22 @@ import static game.Config.*;
 
 public class GamePanel extends JPanel implements ActionListener {
     boolean running;
+    Timer timer;
+
+    // --------------------------
+    // Mouse events
+    // --------------------------
     boolean firstMouseRead;
     long lastFrameNanos;
+    Robot robot;
+
+    // --------------------------
+    // Info panel
+    // --------------------------
+    // For recording Fps
     long lastFpsNanos;
     double currentFps;
     double frameTimeMs;
-    Timer timer;
-    Robot robot;
 
     // --------------------------
     // Raycast cache
@@ -45,12 +54,14 @@ public class GamePanel extends JPanel implements ActionListener {
     double player_epsilon;                      // elevation, radians, in (-π/2, +π/2)
     double player_x, player_y, player_z;        // position in world units
     double player_dforward, player_dright, player_dup;
+    Ray target_ray;
 
     // --------------------------
-    // Map
+    // World variables
     // --------------------------
 
-    int [][][] map = new TestMap().mountainmap;
+    int[][][] map = new TestMap().mountainmap;
+    World world = new World(map);
 
     // --------------------------
     // Initialization
@@ -60,7 +71,8 @@ public class GamePanel extends JPanel implements ActionListener {
         this.setPreferredSize(new Dimension(WINDOW_WIDTH, WINDOW_HEIGHT)); // minimum size for the component to display correctly
         this.setBackground(SKY_COLOR);
         this.setFocusable(true);
-        this.addKeyListener(new ProjectionKeyAdapter());
+        this.addKeyListener(new GameKeyAdapter(this));
+        this.addMouseListener(new GameMouseAdapter(this));
 
         startGame();
 
@@ -78,11 +90,10 @@ public class GamePanel extends JPanel implements ActionListener {
             e.printStackTrace();
             robot = null; // fallback if Robot isn't available
         }
-
-
     }
 
-    public void startGame() { // initialize at the instance of a 'game'
+    public void startGame() {
+        // initialize at the instance of a 'game'
         // Initialize player states
         player_theta = START_THETA;
         player_epsilon = START_EPSILON;
@@ -106,16 +117,21 @@ public class GamePanel extends JPanel implements ActionListener {
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
         if (running) {
-            updateMovement();
-            drawRaysDDA(g);
-            drawDebugInfo(g);
-
-            long now = System.nanoTime();
-            frameTimeMs = (now - lastFpsNanos) / 1e6;
-            currentFps = 1000.0 / frameTimeMs;
-            currentFps = currentFps * 0.9 + (1000.0/frameTimeMs) * 0.1;
-            lastFpsNanos = now;
+            update(g);
         }
+    }
+
+    public void update(Graphics g) {
+        updateMovement();
+        updateTarget();
+        drawRaysDDA(g);
+        drawDebugInfo(g);
+
+        long now = System.nanoTime();
+        frameTimeMs = (now - lastFpsNanos) / 1e6;
+        currentFps = 1000.0 / frameTimeMs;
+        currentFps = currentFps * 0.9 + (1000.0/frameTimeMs) * 0.1;
+        lastFpsNanos = now;
     }
 
     // --------------------------
@@ -130,12 +146,6 @@ public class GamePanel extends JPanel implements ActionListener {
             }
         }
         return minIndex;
-    }
-
-    public static boolean isInMap(double[] arr) {
-        return (-1 < arr[0]) && (arr[0] < WORLD_VOXELS_X) &&
-                (-1 < arr[1]) && (arr[1] < WORLD_VOXELS_Y) &&
-                (-1 < arr[2]) && (arr[2] < WORLD_VOXELS_Z);
     }
 
     public static boolean inRenderDistance(double[] arr) {
@@ -212,17 +222,14 @@ public class GamePanel extends JPanel implements ActionListener {
 
             // Check if voxel is outside render distance
             // if outside, then stop trajectory
-            if (!inRenderDistance(m)) {
-                hit = false;
-                break;
-            }
+            if (!inRenderDistance(m)) break;
 
             // Check if voxel is in the map
             // if outside, don't check in the map
-            if (!isInMap(m)) continue;
+            if (!World.isInMap(m)) continue;
 
             // Check if voxel is solid
-            if (map[(int)m[2]][(int)m[1]][(int)m[0]] != 0) {
+            if (world.map[(int)m[2]][(int)m[1]][(int)m[0]] != 0) {
                 hit = true;
                 break;
             }
@@ -230,7 +237,10 @@ public class GamePanel extends JPanel implements ActionListener {
             steps++;
         }
 
-        return new Ray(dir, hit, t_hit, axis);
+        // Find block that is hit; if not hit, it won't be accessed anyway
+        int[] hit_block = {(int)m[0], (int)m[1], (int)m[2]};  // [x, y, z]
+
+        return new Ray(dir, hit, t_hit, axis, hit_block);
 
     };
 
@@ -251,7 +261,11 @@ public class GamePanel extends JPanel implements ActionListener {
             }
             shade = (int)(shade/Math.max(ray.t_hit(), 1.0));
             shade = Math.clamp(shade, 0, 255);
-            rgb = (shade << 16) | (shade << 8) | shade;
+            if (Arrays.equals(ray.hit_block(),target_ray.hit_block())) {
+                rgb = (shade << 16);
+            } else {
+                rgb = (shade << 16) | (shade << 8) | shade;
+            }
         } else {
             rgb = (135 << 16) | (206 << 8) | 235;
         }
@@ -259,7 +273,6 @@ public class GamePanel extends JPanel implements ActionListener {
     };
 
     public void drawRaysDDA(Graphics g) {
-
         // Main pass for DDA
         double angle_per_pixel = FOV_HORIZONTAL / RENDER_WIDTH;
         double[] playerPos = new double[] {player_x, player_y, player_z};
@@ -307,7 +320,8 @@ public class GamePanel extends JPanel implements ActionListener {
         String[] lines = {
                 String.format("X: %.2f  Y: %.2f  Z: %.2f", player_x, player_y, player_z),
                 String.format("Theta: %.2f  Epsilon: %.2f", Math.toDegrees(player_theta), Math.toDegrees(player_epsilon)),
-                String.format("FPS: %.1f  Frame: %.2fms", currentFps, frameTimeMs)
+                String.format("FPS: %.1f  Frame: %.2fms", currentFps, frameTimeMs),
+                String.format("Target: %d %d %d", target_ray.hit_block()[0], target_ray.hit_block()[1], target_ray.hit_block()[2])
         };
 
         for (int i = 0; i < lines.length; i++) {
@@ -355,6 +369,29 @@ public class GamePanel extends JPanel implements ActionListener {
         firstMouseRead = false;
     }
 
+    public void updateTarget() {
+        double[] playerPos = new double[] {player_x, player_y, player_z};
+        double[] mapPos = new double[] {Math.floor(player_x), Math.floor(player_y), Math.floor(player_z)};
+        CameraBasis cameraBasis = new CameraBasis(player_theta, player_epsilon);
+        double[] dir = new double[3];
+        dir[0] = cameraBasis.forward.x;
+        dir[1] = cameraBasis.forward.y;
+        dir[2] = cameraBasis.forward.z;
+        target_ray = traceRay(dir, playerPos, mapPos);
+    }
+
+    // --------------------------
+    // Event instances
+    // --------------------------
+
+    public void placeBlock() {
+        world.placeBlock(target_ray, 1);
+    }
+
+    public void destroyBlock() {
+        world.destroyBlock(target_ray);
+    }
+
     // --------------------------
     // Key Adapter
     // --------------------------
@@ -364,54 +401,4 @@ public class GamePanel extends JPanel implements ActionListener {
         repaint();
     }
 
-    public class ProjectionKeyAdapter extends KeyAdapter {
-        @Override
-        public void keyPressed(KeyEvent e) {
-            switch (e.getKeyCode()) {
-                case KeyEvent.VK_A:
-                    player_dright = Math.clamp(player_dright-1, -1, 0);
-                    break;
-                case KeyEvent.VK_D:
-                    player_dright = Math.clamp(player_dright+1, 0, 1);
-                    break;
-                case KeyEvent.VK_W:
-                    player_dforward = Math.clamp(player_dforward+1, 0, 1);
-                    break;
-                case KeyEvent.VK_S:
-                    player_dforward = Math.clamp(player_dforward-1, -1, 0);
-                    break;
-                case KeyEvent.VK_SPACE:
-                    player_dup = Math.clamp(player_dup+1, 0, 1);
-                    break;
-                case KeyEvent.VK_SHIFT:
-                    player_dup = Math.clamp(player_dup-1, -1, 0);
-                    break;
-            }
-
-        }
-
-        @Override
-        public void keyReleased(KeyEvent e) {
-            switch (e.getKeyCode()) {
-                case KeyEvent.VK_D:
-                    player_dright = Math.clamp(player_dright - 1, -1, 0);
-                    break;
-                case KeyEvent.VK_A:
-                    player_dright = Math.clamp(player_dright + 1, 0, 1);
-                    break;
-                case KeyEvent.VK_S:
-                    player_dforward = Math.clamp(player_dforward + 1, 0, 1);
-                    break;
-                case KeyEvent.VK_W:
-                    player_dforward = Math.clamp(player_dforward - 1, -1, 0);
-                    break;
-                case KeyEvent.VK_SHIFT:
-                    player_dup = Math.clamp(player_dup + 1, 0, 1);
-                    break;
-                case KeyEvent.VK_SPACE:
-                    player_dup = Math.clamp(player_dup - 1, -1, 0);
-                    break;
-            }
-        }
-    }
 }
