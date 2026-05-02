@@ -23,6 +23,16 @@ public class GamePanel extends JPanel implements ActionListener {
     Robot robot;
 
     // --------------------------
+    // Raycast cache
+    // --------------------------
+
+    // Reduce allocations
+    private static final ThreadLocal<double[]> tlT = ThreadLocal.withInitial(() -> new double[3]);
+    private static final ThreadLocal<double[]> tlDt = ThreadLocal.withInitial(() -> new double[3]);
+    private static final ThreadLocal<double[]> tlM = ThreadLocal.withInitial(() -> new double[3]);
+    private static final ThreadLocal<double[]> tlDm = ThreadLocal.withInitial(() -> new double[3]);
+
+    // --------------------------
     // Render cache
     // --------------------------
     BufferedImage frame;
@@ -139,13 +149,118 @@ public class GamePanel extends JPanel implements ActionListener {
     // Raycast functions
     // --------------------------
 
+    public Ray traceRay(double[] dir, double[] playerPos, double[] mapPos) {
+        double[] t = tlT.get();
+        double[] dt = tlDt.get();
+        double[] m = tlM.get();
+        double[] dm = tlDm.get();
+
+        t[0]=t[1]=t[2]=0;
+        dt[0]=dt[1]=dt[2]=0;
+        dm[0]=dm[1]=dm[2]=0;
+        m[0]=mapPos[0]; m[1]=mapPos[1]; m[2]=mapPos[2];
+
+        /*
+        DDA Goal:
+        Traverse the line of voxels that the ray passes
+        Then check for any solid blocks
+         */
+
+        /*
+        Find t of first crossing of x-plane
+        Eq. 1
+        if dx > 0: px + t * dx = floor(px) + 1
+        if dx < 0: px + t * dx = floor(px)
+        if dx = 0: t = +INF
+
+        Eq. 2: time updates
+        t[i+1] = t[i] + dt
+        where dt = 1 / |dx|
+
+        Eq. 3: voxel lattice pos updates
+        mx[i+1] = mx[i] + dmx
+        where dm = sign of dx
+         */
+
+        // Initialize event steps
+        for (int axis = 0; axis < 3; axis++) {
+            // Eq. 1 & 3b
+            if (dir[axis] > 0) {
+                t[axis] = (mapPos[axis] + 1 - playerPos[axis]) / dir[axis];
+                dm[axis] = 1.0;
+            } else if (dir[axis] < 0) {
+                t[axis] = (mapPos[axis] - playerPos[axis]) / dir[axis];
+                dm[axis] = -1.0;
+            } else {
+                t[axis] = Double.POSITIVE_INFINITY;
+                continue; // don't need dt or dm, will not be used
+            }
+            // Eq. 2b
+            dt[axis] = 1.0 / Math.abs(dir[axis]);
+        }
+
+        // Traverse trajectory
+        boolean hit = false;
+        double t_hit = 0;
+        int steps = 0;
+        int axis = -1;
+        while (steps < MAX_DDA_STEPS) {
+            axis = argmin(t);
+            t_hit = t[axis];
+            m[axis] += dm[axis];
+            t[axis] += dt[axis];
+
+            // Check if voxel is outside render distance
+            // if outside, then stop trajectory
+            if (!inRenderDistance(m)) {
+                hit = false;
+                break;
+            }
+
+            // Check if voxel is in the map
+            // if outside, don't check in the map
+            if (!isInMap(m)) continue;
+
+            // Check if voxel is solid
+            if (map[(int)m[2]][(int)m[1]][(int)m[0]] != 0) {
+                hit = true;
+                break;
+            }
+
+            steps++;
+        }
+
+        return new Ray(dir, hit, t_hit, axis);
+
+    };
+
     // --------------------------
     // Render functions
     // --------------------------
 
+    public void drawPixel(Ray ray, int row, int col) {
+        int rgb;
+        if (ray.hit()) {
+            int shade;
+            if (ray.axis() == 0) {
+                shade = 170;
+            } else if (ray.axis() == 1) {
+                shade = 213;
+            } else {
+                shade = 255;
+            }
+            shade = (int)(shade/Math.max(ray.t_hit(), 1.0));
+            shade = Math.clamp(shade, 0, 255);
+            rgb = (shade << 16) | (shade << 8) | shade;
+        } else {
+            rgb = (135 << 16) | (206 << 8) | 235;
+        }
+        pixels[row * RENDER_WIDTH + col] = rgb;
+    };
+
     public void drawRaysDDA(Graphics g) {
 
-        // First pass for DDA
+        // Main pass for DDA
         double angle_per_pixel = FOV_HORIZONTAL / RENDER_WIDTH;
         double[] playerPos = new double[] {player_x, player_y, player_z};
         double[] mapPos = new double[] {Math.floor(player_x), Math.floor(player_y), Math.floor(player_z)};
@@ -161,10 +276,6 @@ public class GamePanel extends JPanel implements ActionListener {
         double cb_rz = cameraBasis.right.z;
 
         IntStream.range(0, RENDER_HEIGHT).parallel().forEach(row -> {
-            double[] t = new double[3];
-            double[] dt = new double[3];
-            double[] m = new double[3];
-            double[] dm = new double[3];
             double[] dir = new double[3];
 
             for (int col = 0; col < RENDER_WIDTH; col++){
@@ -179,99 +290,11 @@ public class GamePanel extends JPanel implements ActionListener {
                 dir[1] /= len;
                 dir[2] /= len;
 
-
-                /*
-                DDA Goal:
-                Traverse the line of voxels that the ray passes
-                Then check for any solid blocks
-                 */
-
-                /*
-                Find t of first crossing of x-plane
-                Eq. 1
-                if dx > 0: px + t * dx = floor(px) + 1
-                if dx < 0: px + t * dx = floor(px)
-                if dx = 0: t = +INF
-
-                Eq. 2: time updates
-                t[i+1] = t[i] + dt
-                where dt = 1 / |dx|
-
-                Eq. 3: voxel lattice pos updates
-                mx[i+1] = mx[i] + dmx
-                where dm = sign of dx
-                 */
-
-                // Initialize event steps
-                t[0]=t[1]=t[2]=0;
-                dt[0]=dt[1]=dt[2]=0;
-                dm[0]=dm[1]=dm[2]=0;
-                m[0]=mapPos[0]; m[1]=mapPos[1]; m[2]=mapPos[2];
-                for (int axis = 0; axis < 3; axis++) {
-                    // Eq. 1 & 3b
-                    if (dir[axis] > 0) {
-                        t[axis] = (mapPos[axis] + 1 - playerPos[axis]) / dir[axis];
-                        dm[axis] = 1.0;
-                    } else if (dir[axis] < 0) {
-                        t[axis] = (mapPos[axis] - playerPos[axis]) / dir[axis];
-                        dm[axis] = -1.0;
-                    } else {
-                        t[axis] = Double.POSITIVE_INFINITY;
-                        continue; // don't need dt or dm, will not be used
-                    }
-                    // Eq. 2b
-                    dt[axis] = 1.0 / Math.abs(dir[axis]);
-                }
-
-                // Traverse trajectory
-                boolean hit = false;
-                double t_hit = 0;
-                int steps = 0;
-                int dim = -1;
-                while (steps < MAX_DDA_STEPS) {
-                    dim = argmin(t);
-                    t_hit = t[dim];
-                    m[dim] += dm[dim];
-                    t[dim] += dt[dim];
-
-                    // Check if voxel is outside render distance
-                    // if outside, then stop trajectory
-                    if (!inRenderDistance(m)) {
-                        hit = false;
-                        break;
-                    }
-
-                    // Check if voxel is in the map
-                    // if outside, don't check in the map
-                    if (!isInMap(m)) continue;
-
-                    // Check if voxel is solid
-                    if (map[(int)m[2]][(int)m[1]][(int)m[0]] != 0) {
-                        hit = true;
-                        break;
-                    }
-
-                    steps++;
-                }
+                // Find ray hit
+                Ray ray = traceRay(dir, playerPos, mapPos);
 
                 // Now render the pixel
-                int rgb;
-                if (hit) {
-                    int shade;
-                    if (dim == 0) {
-                        shade = 170;
-                    } else if (dim == 1) {
-                        shade = 213;
-                    } else {
-                        shade = 255;
-                    }
-                    shade /= Math.max(t_hit, 1.0);
-                    shade = Math.clamp(shade, 0, 255);
-                    rgb = (shade << 16) | (shade << 8) | shade;
-                } else {
-                    rgb = (135 << 16) | (206 << 8) | 235;
-                }
-                pixels[row * RENDER_WIDTH + col] = rgb;
+                drawPixel(ray, row, col);
             }
         });
 
