@@ -60,8 +60,7 @@ public class GamePanel extends JPanel implements ActionListener {
     // World variables
     // --------------------------
 
-    int[][][] map = new TestMap().mountainmap;
-    World world = new World(map);
+    World world = new World();
 
     // --------------------------
     // Initialization
@@ -76,12 +75,8 @@ public class GamePanel extends JPanel implements ActionListener {
 
         startGame();
 
-        // Hide cursor (if in window)
-        Cursor blank = Toolkit.getDefaultToolkit().createCustomCursor(
-                new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB),
-                new Point(0, 0), "blank"
-        );
-        this.setCursor(blank);
+        // Set crosshair cursor
+        this.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
 
         // Relative motion robot
         try {
@@ -159,7 +154,7 @@ public class GamePanel extends JPanel implements ActionListener {
     // Raycast functions
     // --------------------------
 
-    public Ray traceRay(double[] dir, double[] playerPos, double[] mapPos) {
+    public Ray traceRay(double[] dir, double[] startPos, double[] startVoxelPos) {
         double[] t = tlT.get();
         double[] dt = tlDt.get();
         double[] m = tlM.get();
@@ -168,7 +163,7 @@ public class GamePanel extends JPanel implements ActionListener {
         t[0]=t[1]=t[2]=0;
         dt[0]=dt[1]=dt[2]=0;
         dm[0]=dm[1]=dm[2]=0;
-        m[0]=mapPos[0]; m[1]=mapPos[1]; m[2]=mapPos[2];
+        m[0]=startVoxelPos[0]; m[1]=startVoxelPos[1]; m[2]=startVoxelPos[2];
 
         /*
         DDA Goal:
@@ -196,10 +191,10 @@ public class GamePanel extends JPanel implements ActionListener {
         for (int axis = 0; axis < 3; axis++) {
             // Eq. 1 & 3b
             if (dir[axis] > 0) {
-                t[axis] = (mapPos[axis] + 1 - playerPos[axis]) / dir[axis];
+                t[axis] = (startVoxelPos[axis] + 1 - startPos[axis]) / dir[axis];
                 dm[axis] = 1.0;
             } else if (dir[axis] < 0) {
-                t[axis] = (mapPos[axis] - playerPos[axis]) / dir[axis];
+                t[axis] = (startVoxelPos[axis] - startPos[axis]) / dir[axis];
                 dm[axis] = -1.0;
             } else {
                 t[axis] = Double.POSITIVE_INFINITY;
@@ -259,13 +254,20 @@ public class GamePanel extends JPanel implements ActionListener {
             } else {
                 shade = 255;
             }
-            shade = (int)(shade/Math.max(ray.t_hit(), 1.0));
-            shade = Math.clamp(shade, 0, 255);
+            double fogFactor = Math.clamp(ray.t_hit() / FOG_DISTANCE, 0.0, 1.0);
+
+            int r, g, b;
             if (Arrays.equals(ray.hit_block(),target_ray.hit_block())) {
-                rgb = (shade << 16);
+                r = shade; g = 0; b = 0;
             } else {
-                rgb = (shade << 16) | (shade << 8) | shade;
+                r = g = b = shade;
             }
+
+            r = (int)(r * (1 - fogFactor) + 135 * fogFactor);
+            g = (int)(g * (1 - fogFactor) + 206 * fogFactor);
+            b = (int)(b * (1 - fogFactor) + 235 * fogFactor);
+
+            rgb = (r << 16) | (g << 8) | b;
         } else {
             rgb = (135 << 16) | (206 << 8) | 235;
         }
@@ -273,10 +275,8 @@ public class GamePanel extends JPanel implements ActionListener {
     };
 
     public void drawRaysDDA(Graphics g) {
-        // Main pass for DDA
+        // Find camera basis
         double angle_per_pixel = FOV_HORIZONTAL / RENDER_WIDTH;
-        double[] playerPos = new double[] {player_x, player_y, player_z};
-        double[] mapPos = new double[] {Math.floor(player_x), Math.floor(player_y), Math.floor(player_z)};
         CameraBasis cameraBasis = new CameraBasis(player_theta, player_epsilon);
         double cb_fx = cameraBasis.forward.x;
         double cb_fy = cameraBasis.forward.y;
@@ -287,6 +287,10 @@ public class GamePanel extends JPanel implements ActionListener {
         double cb_rx = cameraBasis.right.x;
         double cb_ry = cameraBasis.right.y;
         double cb_rz = cameraBasis.right.z;
+
+        // Find ray start position
+        double[] startPos = new double[] {player_x + POV_DIST * cb_fx, player_y + POV_DIST * cb_fy, player_z + POV_DIST * cb_fz};
+        double[] startVoxelPos = new double[] {Math.floor(startPos[0]), Math.floor(startPos[1]), Math.floor(startPos[2])};
 
         IntStream.range(0, RENDER_HEIGHT).parallel().forEach(row -> {
             double[] dir = new double[3];
@@ -304,7 +308,7 @@ public class GamePanel extends JPanel implements ActionListener {
                 dir[2] /= len;
 
                 // Find ray hit
-                Ray ray = traceRay(dir, playerPos, mapPos);
+                Ray ray = traceRay(dir, startPos, startVoxelPos);
 
                 // Now render the pixel
                 drawPixel(ray, row, col);

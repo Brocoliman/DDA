@@ -20,6 +20,7 @@ public final class Config {
     // ALL RAYCAST settings
     // --------------------------
     public static final double FOV_HORIZONTAL = Math.toRadians(70);
+    public static final int POV_DIST = -0; // distance behind camera to start light beams
 
     // --------------------------
     // ALL WORLD settings

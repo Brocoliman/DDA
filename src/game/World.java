@@ -5,7 +5,9 @@ import static game.Config.*;
 public class World {
     final int[][][] map;
 
-    public World(int[][][] map) { this.map = map; }
+    public World() {
+        this.map = new TestMap().mountainmap;
+    }
 
     public static boolean isInMap(double[] arr) {
         return (-1 < arr[0]) && (arr[0] < WORLD_VOXELS_X) &&
