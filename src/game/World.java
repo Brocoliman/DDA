@@ -1,18 +1,47 @@
 package game;
 
+import java.util.Random;
+
 import static game.Config.*;
+import static game.OpenSimplex2.noise2;
 
 public class World {
     final int[][][] map;
+    final int voxels_x;
+    final int voxels_y;
+    final int voxels_z;
 
-    public World() {
-        this.map = new TestMap().mountainmap;
+    final Random random;
+    final int seed;
+
+    public World(int seed, int voxels_x, int voxels_y, int voxels_z) {
+        this.seed = seed;
+        this.voxels_x = voxels_x;
+        this.voxels_y = voxels_y;
+        this.voxels_z = voxels_z;
+        this.map = new int[voxels_z][voxels_y][voxels_x];
+
+        this.random = new Random();
     }
 
-    public static boolean isInMap(double[] arr) {
-        return (-1 < arr[0]) && (arr[0] < WORLD_VOXELS_X) &&
-                (-1 < arr[1]) && (arr[1] < WORLD_VOXELS_Y) &&
-                (-1 < arr[2]) && (arr[2] < WORLD_VOXELS_Z);
+    public void initialize() {
+        for (int y_unit = 0; y_unit < voxels_y; y_unit++) {
+            for (int x_unit = 0; x_unit < voxels_x; x_unit++) {
+                double n = noise2(seed, x_unit*0.02, y_unit*0.02) * 1.0          // big mountains
+                        + noise2(seed, x_unit*0.08, y_unit*0.08) * 0.4          // medium hills
+                        + noise2(seed, x_unit*0.32, y_unit*0.32) * 0.05;        // small bumps
+                int height = (int) ((n+1)*0.5*voxels_z);
+                for (int z_unit = 0; z_unit < height; z_unit++) {
+                    map[z_unit][y_unit][x_unit] = 1;
+                }
+            }
+        }
+    }
+
+    public boolean isInMap(double[] arr) {
+        return (-1 < arr[0]) && (arr[0] < voxels_x) &&
+                (-1 < arr[1]) && (arr[1] < voxels_y) &&
+                (-1 < arr[2]) && (arr[2] < voxels_z);
     }
     public void placeBlock(Ray ray, int block_type) {
         int[] voxel = ray.hit_block();

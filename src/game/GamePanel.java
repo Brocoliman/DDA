@@ -60,7 +60,7 @@ public class GamePanel extends JPanel implements ActionListener {
     // World variables
     // --------------------------
 
-    World world = new World();
+    World world = new World(WORLD_SEED, WORLD_VOXELS_X, WORLD_VOXELS_Y, WORLD_VOXELS_Z);
 
     // --------------------------
     // Initialization
@@ -68,7 +68,6 @@ public class GamePanel extends JPanel implements ActionListener {
 
     GamePanel() { // initialize things at the instance of an 'app'
         this.setPreferredSize(new Dimension(WINDOW_WIDTH, WINDOW_HEIGHT)); // minimum size for the component to display correctly
-        this.setBackground(SKY_COLOR);
         this.setFocusable(true);
         this.addKeyListener(new GameKeyAdapter(this));
         this.addMouseListener(new GameMouseAdapter(this));
@@ -88,6 +87,8 @@ public class GamePanel extends JPanel implements ActionListener {
     }
 
     public void startGame() {
+        world.initialize();
+
         // initialize at the instance of a 'game'
         // Initialize player states
         player_theta = START_THETA;
@@ -143,11 +144,8 @@ public class GamePanel extends JPanel implements ActionListener {
         return minIndex;
     }
 
-    public static boolean inRenderDistance(double[] arr) {
-        int extra_world_bounds = 10;
-        return (-extra_world_bounds < arr[0]) && (arr[0] < WORLD_VOXELS_X+extra_world_bounds) &&
-                (-extra_world_bounds < arr[1]) && (arr[1] < WORLD_VOXELS_Y+extra_world_bounds) &&
-                (-extra_world_bounds < arr[2]) && (arr[2] < WORLD_VOXELS_Z+extra_world_bounds);
+    public static boolean inRenderDistance(double time) {
+        return time < MAX_DDA_TIME;
     }
 
     // --------------------------
@@ -217,18 +215,17 @@ public class GamePanel extends JPanel implements ActionListener {
 
             // Check if voxel is outside render distance
             // if outside, then stop trajectory
-            if (!inRenderDistance(m)) break;
+            if (!inRenderDistance(t_hit)) break;
 
             // Check if voxel is in the map
             // if outside, don't check in the map
-            if (!World.isInMap(m)) continue;
+            if (!world.isInMap(m)) continue;
 
             // Check if voxel is solid
             if (world.map[(int)m[2]][(int)m[1]][(int)m[0]] != 0) {
                 hit = true;
                 break;
             }
-
             steps++;
         }
 
@@ -269,7 +266,7 @@ public class GamePanel extends JPanel implements ActionListener {
 
             rgb = (r << 16) | (g << 8) | b;
         } else {
-            rgb = (135 << 16) | (206 << 8) | 235;
+            rgb = (SKY_COLOR_R << 16) | (SKY_COLOR_G << 8) | SKY_COLOR_B;
         }
         pixels[row * RENDER_WIDTH + col] = rgb;
     };
@@ -389,11 +386,11 @@ public class GamePanel extends JPanel implements ActionListener {
     // --------------------------
 
     public void placeBlock() {
-        world.placeBlock(target_ray, 1);
+        if(target_ray.hit()) world.placeBlock(target_ray, 1);
     }
 
     public void destroyBlock() {
-        world.destroyBlock(target_ray);
+        if(target_ray.hit()) world.destroyBlock(target_ray);
     }
 
     // --------------------------
