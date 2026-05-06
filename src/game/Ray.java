@@ -1,3 +1,11 @@
 package game;
 
-public record Ray (double[] dir, boolean hit, double t_hit, int axis, int[] hit_block) {};
+public class Ray {
+    public double[] dir;
+    public boolean hit;
+    public double t_hit;
+    public int axis;
+    public int[] hit_block = new int[3];
+
+    public Ray() {}
+}

@@ -36,6 +36,7 @@ public class GamePanel extends JPanel implements ActionListener {
     // --------------------------
 
     // Reduce allocations
+    private static final ThreadLocal<Ray> tlRay = ThreadLocal.withInitial(Ray::new);
     private static final ThreadLocal<double[]> tlT = ThreadLocal.withInitial(() -> new double[3]);
     private static final ThreadLocal<double[]> tlDt = ThreadLocal.withInitial(() -> new double[3]);
     private static final ThreadLocal<double[]> tlM = ThreadLocal.withInitial(() -> new double[3]);
@@ -131,28 +132,10 @@ public class GamePanel extends JPanel implements ActionListener {
     }
 
     // --------------------------
-    // Helper functions
-    // --------------------------
-
-    public static int argmin(double[] arr) {
-        int minIndex = 0;
-        for (int i = 1; i < arr.length; i++) {
-            if (arr[i] < arr[minIndex]) {
-                minIndex = i;
-            }
-        }
-        return minIndex;
-    }
-
-    public static boolean inRenderDistance(double time) {
-        return time < MAX_DDA_TIME;
-    }
-
-    // --------------------------
     // Raycast functions
     // --------------------------
 
-    public Ray traceRay(double[] dir, double[] startPos, double[] startVoxelPos) {
+    public Ray traceRay(double[] dir, double[] startPos, double[] startVoxelPos, Ray out) {
         double[] t = tlT.get();
         double[] dt = tlDt.get();
         double[] m = tlM.get();
@@ -208,18 +191,25 @@ public class GamePanel extends JPanel implements ActionListener {
         int steps = 0;
         int axis = -1;
         while (steps < MAX_DDA_STEPS) {
-            axis = argmin(t);
+            axis = 0;
+            for (int i = 1; i < t.length; i++) {
+                if (t[i] < t[axis]) {
+                    axis = i;
+                }
+            }
             t_hit = t[axis];
             m[axis] += dm[axis];
             t[axis] += dt[axis];
 
             // Check if voxel is outside render distance
             // if outside, then stop trajectory
-            if (!inRenderDistance(t_hit)) break;
+            if (t_hit > MAX_DDA_TIME) break;
 
             // Check if voxel is in the map
             // if outside, don't check in the map
-            if (!world.isInMap(m)) continue;
+            if (!((-1 < m[0]) && (m[0] < WORLD_VOXELS_X) &&
+                    (-1 < m[1]) && (m[1] < WORLD_VOXELS_Y) &&
+                    (-1 < m[2]) && (m[2] < WORLD_VOXELS_Z))) continue;
 
             // Check if voxel is solid
             if (world.map[(int)m[2]][(int)m[1]][(int)m[0]] != 0) {
@@ -232,9 +222,16 @@ public class GamePanel extends JPanel implements ActionListener {
         // Find block that is hit; if not hit, it won't be accessed anyway
         int[] hit_block = {(int)m[0], (int)m[1], (int)m[2]};  // [x, y, z]
 
-        return new Ray(dir, hit, t_hit, axis, hit_block);
+        out.dir = dir;
+        out.hit = hit;
+        out.t_hit = t_hit;
+        out.axis = axis;
+        out.hit_block[0] = (int)m[0];
+        out.hit_block[1] = (int)m[1];
+        out.hit_block[2] = (int)m[2];
+        return out;
 
-    };
+    }
 
     // --------------------------
     // Render functions
@@ -242,19 +239,19 @@ public class GamePanel extends JPanel implements ActionListener {
 
     public void drawPixel(Ray ray, int row, int col) {
         int rgb;
-        if (ray.hit()) {
+        if (ray.hit) {
             int shade;
-            if (ray.axis() == 0) {
+            if (ray.axis == 0) {
                 shade = 170;
-            } else if (ray.axis() == 1) {
+            } else if (ray.axis == 1) {
                 shade = 213;
             } else {
                 shade = 255;
             }
-            double fogFactor = Math.clamp(ray.t_hit() / FOG_DISTANCE, 0.0, 1.0);
+            double fogFactor = Math.clamp(ray.t_hit / FOG_DISTANCE, 0.0, 1.0);
 
             int r, g, b;
-            if (Arrays.equals(ray.hit_block(),target_ray.hit_block())) {
+            if (Arrays.equals(ray.hit_block,target_ray.hit_block)) {
                 r = shade; g = 0; b = 0;
             } else {
                 r = g = b = shade;
@@ -304,10 +301,9 @@ public class GamePanel extends JPanel implements ActionListener {
                 dir[1] /= len;
                 dir[2] /= len;
 
-                // Find ray hit
-                Ray ray = traceRay(dir, startPos, startVoxelPos);
-
-                // Now render the pixel
+                // Find ray hit and draw
+                Ray ray = tlRay.get();
+                traceRay(dir, startPos, startVoxelPos, ray);
                 drawPixel(ray, row, col);
             }
         });
@@ -322,7 +318,7 @@ public class GamePanel extends JPanel implements ActionListener {
                 String.format("X: %.2f  Y: %.2f  Z: %.2f", player_x, player_y, player_z),
                 String.format("Theta: %.2f  Epsilon: %.2f", Math.toDegrees(player_theta), Math.toDegrees(player_epsilon)),
                 String.format("FPS: %.1f  Frame: %.2fms", currentFps, frameTimeMs),
-                String.format("Target: %d %d %d", target_ray.hit_block()[0], target_ray.hit_block()[1], target_ray.hit_block()[2])
+                String.format("Target: %d %d %d", target_ray.hit_block[0], target_ray.hit_block[1], target_ray.hit_block[2])
         };
 
         for (int i = 0; i < lines.length; i++) {
@@ -378,7 +374,8 @@ public class GamePanel extends JPanel implements ActionListener {
         dir[0] = cameraBasis.forward.x;
         dir[1] = cameraBasis.forward.y;
         dir[2] = cameraBasis.forward.z;
-        target_ray = traceRay(dir, playerPos, mapPos);
+        Ray ray = new Ray();
+        target_ray = traceRay(dir, playerPos, mapPos, ray);
     }
 
     // --------------------------
@@ -386,11 +383,11 @@ public class GamePanel extends JPanel implements ActionListener {
     // --------------------------
 
     public void placeBlock() {
-        if(target_ray.hit()) world.placeBlock(target_ray, 1);
+        if(target_ray.hit) world.placeBlock(target_ray, 1);
     }
 
     public void destroyBlock() {
-        if(target_ray.hit()) world.destroyBlock(target_ray);
+        if(target_ray.hit) world.destroyBlock(target_ray);
     }
 
     // --------------------------

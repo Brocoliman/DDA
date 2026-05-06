@@ -12,8 +12,8 @@ public final class Config {
     // --------------------------
     // RENDER display
     // --------------------------
-    public static final int RENDER_WIDTH = 256 * 2;
-    public static final int RENDER_HEIGHT = 192 * 2;
+    public static final int RENDER_WIDTH = 256 * 4;
+    public static final int RENDER_HEIGHT = 192 * 4;
     public static final int DELAY = 8; // FPS
 
     // --------------------------
@@ -34,7 +34,7 @@ public final class Config {
     // RENDERING tuning
     // --------------------------
     public static final int MAX_DDA_STEPS = WORLD_VOXELS_X + WORLD_VOXELS_Y + WORLD_VOXELS_Z + 2;
-    public static final double MAX_DDA_TIME = 100.0;
+    public static final double MAX_DDA_TIME = 50.0;
     public static final double FOG_DISTANCE = 50.0;     // world units at which fog reaches max
     public static final int SKY_COLOR_R = 135;
     public static final int SKY_COLOR_G = 206;
