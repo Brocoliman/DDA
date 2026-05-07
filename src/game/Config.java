@@ -1,5 +1,4 @@
 package game;
-import java.awt.*;
 
 public final class Config {
     private Config() {}
@@ -12,9 +11,9 @@ public final class Config {
     // --------------------------
     // RENDER display
     // --------------------------
-    public static final int RENDER_WIDTH = 256 * 4;
-    public static final int RENDER_HEIGHT = 192 * 4;
-    public static final int DELAY = 8; // FPS
+    public static final int RENDER_WIDTH = 256 * 2;
+    public static final int RENDER_HEIGHT = 192 * 2;
+    public static final int DELAY = 8; // 1000/FPS
 
     // --------------------------
     // ALL RAYCAST settings
@@ -43,7 +42,13 @@ public final class Config {
     // --------------------------
     // INPUT settings
     // --------------------------
-    public static final double MOVE_SPEED = 7.0;        // world units per second
+    public static final double WALK_SPEED = 3.0;        // world units per second
+    public static final double JUMP_STRENGTH = 7.0;        // world units per second
+    public static final double GRAVITY = 2*9.8;
+    public static final double TERM_ZVEL = -12;// world units per second
+    public static final double BB_HORIZONTAL_HALF = 0.3;
+    public static final double BB_VERTICAL_DOWN = 1.5;
+    public static final double BB_VERTICAL_UP = 0.3;
     public static final double MOUSE_SENSITIVITY_X = 0.003;  // radians per pixel of mouse motion
     public static final double MOUSE_SENSITIVITY_Y = 0.003;
 
@@ -53,7 +58,7 @@ public final class Config {
 
     public static final double START_X = 4.0;
     public static final double START_Y = 4.0;
-    public static final double START_Z = 4.0;
+    public static final double START_Z = 14.0;
     public static final double START_THETA = 0.0;
     public static final double START_EPSILON = 0.0;
 }

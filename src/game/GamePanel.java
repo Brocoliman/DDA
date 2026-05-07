@@ -3,7 +3,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.KeyAdapter;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.util.Arrays;
@@ -54,7 +53,9 @@ public class GamePanel extends JPanel implements ActionListener {
     double player_theta;                        // azimuth, radians
     double player_epsilon;                      // elevation, radians, in (-π/2, +π/2)
     double player_x, player_y, player_z;        // position in world units
-    double player_dforward, player_dright, player_dup;
+    double player_dforward, player_dright;
+    double player_zaccel, player_zvel;
+    boolean player_canjump;
     Ray target_ray;
 
     // --------------------------
@@ -97,6 +98,8 @@ public class GamePanel extends JPanel implements ActionListener {
         player_x = START_X;
         player_y = START_Y;
         player_z = START_Z;
+        player_zvel = 0;
+        player_canjump = false;
 
         running = true;
         lastFrameNanos = System.nanoTime();
@@ -315,7 +318,7 @@ public class GamePanel extends JPanel implements ActionListener {
     private void drawDebugInfo(Graphics g) {
         g.setFont(new Font("Monospaced", Font.PLAIN, 14));
         String[] lines = {
-                String.format("X: %.2f  Y: %.2f  Z: %.2f", player_x, player_y, player_z),
+                String.format("X: %.2f  Y: %.2f  Z: %.2f ZVel: %.2f", player_x, player_y, player_z, player_zvel),
                 String.format("Theta: %.2f  Epsilon: %.2f", Math.toDegrees(player_theta), Math.toDegrees(player_epsilon)),
                 String.format("FPS: %.1f  Frame: %.2fms", currentFps, frameTimeMs),
                 String.format("Target: %d %d %d", target_ray.hit_block[0], target_ray.hit_block[1], target_ray.hit_block[2])
@@ -336,20 +339,48 @@ public class GamePanel extends JPanel implements ActionListener {
     // Event cycles
     // --------------------------
 
+    public boolean wouldCollide(double x, double y, double z) {
+        int min_voxel_x = (int)Math.floor(x-BB_HORIZONTAL_HALF);
+        int max_voxel_x = (int)Math.floor(x+BB_HORIZONTAL_HALF);
+        int min_voxel_y = (int)Math.floor(y-BB_HORIZONTAL_HALF);
+        int max_voxel_y = (int)Math.floor(y+BB_HORIZONTAL_HALF);
+        int min_voxel_z = (int)Math.floor(z-BB_VERTICAL_DOWN);
+        int max_voxel_z = (int)Math.floor(z+BB_VERTICAL_UP);
+        boolean collide = false;
+        for (int voxel_x = min_voxel_x; voxel_x <= max_voxel_x; voxel_x++) {
+            for (int voxel_y = min_voxel_y; voxel_y <= max_voxel_y; voxel_y++) {
+                for (int voxel_z = min_voxel_z; voxel_z <= max_voxel_z; voxel_z++) {
+                    if (world.isSolid(voxel_x, voxel_y, voxel_z)) {
+                        collide = true;
+                        break;
+                    }
+                }
+            }
+        }
+        return collide;
+    }
+
     public void updateMovement() {
         // Apply player movement update
+        player_zvel -= GRAVITY * DELAY/1000;
+        player_zvel = Math.max(TERM_ZVEL, player_zvel);
         long now = System.nanoTime();
         double dt = (now - lastFrameNanos) / 1e9;  // seconds
         lastFrameNanos = now;
-
         MovementBasis movementBasis = new MovementBasis(player_theta);
         Vec3 player_dxyz = movementBasis.forward.scale(player_dforward)
-                .add(movementBasis.right.scale(player_dright))
-                .add(movementBasis.up.scale(player_dup));
-
-        player_x += player_dxyz.x * dt * MOVE_SPEED;
-        player_y += player_dxyz.y * dt * MOVE_SPEED;
-        player_z += player_dxyz.z * dt * MOVE_SPEED;
+                .add(movementBasis.right.scale(player_dright));
+        double new_x = player_x + player_dxyz.x * dt * WALK_SPEED;
+        double new_y = player_y + player_dxyz.y * dt * WALK_SPEED;
+        double new_z = player_z + player_zvel * dt;
+        if (!wouldCollide(new_x, player_y, player_z)) player_x = new_x;
+        if (!wouldCollide(player_x, new_y, player_z)) player_y = new_y;
+        if (!wouldCollide(player_x, player_y, new_z)) {
+            player_z = new_z;
+        } else {
+            player_zvel = 0;
+            player_canjump = true;
+        }
 
         // Apply mouse movements update
         Point window_topleft = this.getLocationOnScreen();

@@ -2,6 +2,8 @@ package game;
 
 import java.awt.event.KeyEvent;
 
+import static game.Config.JUMP_STRENGTH;
+
 public class GameKeyAdapter extends java.awt.event.KeyAdapter {
     private final GamePanel panel;
 
@@ -25,10 +27,12 @@ public class GameKeyAdapter extends java.awt.event.KeyAdapter {
                 panel.player_dforward = Math.clamp(panel.player_dforward-1, -1, 0);
                 break;
             case KeyEvent.VK_SPACE:
-                panel.player_dup = Math.clamp(panel.player_dup+1, 0, 1);
+                if (panel.player_canjump) {
+                    panel.player_zvel = JUMP_STRENGTH;
+                    panel.player_canjump = false;
+                }
                 break;
             case KeyEvent.VK_SHIFT:
-                panel.player_dup = Math.clamp(panel.player_dup-1, -1, 0);
                 break;
         }
 
@@ -48,12 +52,6 @@ public class GameKeyAdapter extends java.awt.event.KeyAdapter {
                 break;
             case KeyEvent.VK_W:
                 panel.player_dforward = Math.clamp(panel.player_dforward - 1, -1, 0);
-                break;
-            case KeyEvent.VK_SHIFT:
-                panel.player_dup = Math.clamp(panel.player_dup + 1, 0, 1);
-                break;
-            case KeyEvent.VK_SPACE:
-                panel.player_dup = Math.clamp(panel.player_dup - 1, -1, 0);
                 break;
         }
     }
