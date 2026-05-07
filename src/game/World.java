@@ -13,6 +13,7 @@ public class World {
 
     final Random random;
     final int seed;
+    public double[] playerStartPos;
 
     public World(int seed, int voxels_x, int voxels_y, int voxels_z) {
         this.seed = seed;
@@ -25,12 +26,16 @@ public class World {
     }
 
     public void initialize() {
+        playerStartPos = new double[3];
+        playerStartPos[0] = (int)((Math.clamp(random.nextGaussian(), -1, 1)+1)/2*voxels_x);
+        playerStartPos[1] = (int)((Math.clamp(random.nextGaussian(), -1, 1)+1)/2*voxels_y);
         for (int y_unit = 0; y_unit < voxels_y; y_unit++) {
             for (int x_unit = 0; x_unit < voxels_x; x_unit++) {
-                double n = noise2(seed, x_unit*0.02, y_unit*0.02) * 1.0          // big mountains
-                        + noise2(seed, x_unit*0.08, y_unit*0.08) * 0.4          // medium hills
-                        + noise2(seed, x_unit*0.32, y_unit*0.32) * 0.05;        // small bumps
+                double n = noise2(seed, x_unit*0.02, y_unit*0.02) * 0.55
+                        + noise2(seed, x_unit*0.08, y_unit*0.08) * 0.4
+                        + noise2(seed, x_unit*0.32, y_unit*0.32) * 0.05;
                 int height = (int) ((n+1)*0.5*voxels_z);
+                if (x_unit==playerStartPos[0] && y_unit==playerStartPos[1]) playerStartPos[2] = height+1+BB_VERTICAL_DOWN;
                 for (int z_unit = 0; z_unit < height; z_unit++) {
                     map[z_unit][y_unit][x_unit] = 1;
                 }

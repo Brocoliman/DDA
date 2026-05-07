@@ -54,8 +54,8 @@ public class GamePanel extends JPanel implements ActionListener {
     double player_epsilon;                      // elevation, radians, in (-π/2, +π/2)
     double player_x, player_y, player_z;        // position in world units
     double player_dforward, player_dright;
-    double player_zaccel, player_zvel;
-    boolean player_canjump;
+    double player_xvel, player_yvel, player_zvel;
+    boolean grounded;
     Ray target_ray;
 
     // --------------------------
@@ -95,11 +95,11 @@ public class GamePanel extends JPanel implements ActionListener {
         // Initialize player states
         player_theta = START_THETA;
         player_epsilon = START_EPSILON;
-        player_x = START_X;
-        player_y = START_Y;
-        player_z = START_Z;
+        player_x = world.playerStartPos[0];
+        player_y = world.playerStartPos[1];
+        player_z = world.playerStartPos[2];
         player_zvel = 0;
-        player_canjump = false;
+        grounded = false;
 
         running = true;
         lastFrameNanos = System.nanoTime();
@@ -153,9 +153,7 @@ public class GamePanel extends JPanel implements ActionListener {
         DDA Goal:
         Traverse the line of voxels that the ray passes
         Then check for any solid blocks
-         */
 
-        /*
         Find t of first crossing of x-plane
         Eq. 1
         if dx > 0: px + t * dx = floor(px) + 1
@@ -222,9 +220,6 @@ public class GamePanel extends JPanel implements ActionListener {
             steps++;
         }
 
-        // Find block that is hit; if not hit, it won't be accessed anyway
-        int[] hit_block = {(int)m[0], (int)m[1], (int)m[2]};  // [x, y, z]
-
         out.dir = dir;
         out.hit = hit;
         out.t_hit = t_hit;
@@ -232,6 +227,9 @@ public class GamePanel extends JPanel implements ActionListener {
         out.hit_block[0] = (int)m[0];
         out.hit_block[1] = (int)m[1];
         out.hit_block[2] = (int)m[2];
+        out.hit_point[0] = startPos[0] + dir[0] * t_hit;
+        out.hit_point[1] = startPos[1] + dir[1] * t_hit;
+        out.hit_point[2] = startPos[2] + dir[2] * t_hit;
         return out;
 
     }
@@ -254,8 +252,20 @@ public class GamePanel extends JPanel implements ActionListener {
             double fogFactor = Math.clamp(ray.t_hit / FOG_DISTANCE, 0.0, 1.0);
 
             int r, g, b;
-            if (Arrays.equals(ray.hit_block,target_ray.hit_block)) {
-                r = shade; g = 0; b = 0;
+            boolean isOutline = false;
+            if (Arrays.equals(ray.hit_block, target_ray.hit_block)) {
+                for (int axis = 0; axis < 3; axis++) {
+                    if (axis == ray.axis) continue;
+                    double local = ray.hit_point[axis] - ray.hit_block[axis];
+                    if (local < EDGE_WIDTH || local > 1.0 - EDGE_WIDTH) {
+                        isOutline = true;
+                        break;
+                    }
+                }
+            }
+
+            if (isOutline) {
+                r = 0; g = 0; b = 0;
             } else {
                 r = g = b = shade;
             }
@@ -378,8 +388,8 @@ public class GamePanel extends JPanel implements ActionListener {
         if (!wouldCollide(player_x, player_y, new_z)) {
             player_z = new_z;
         } else {
+            if (player_zvel < 0) grounded = true;  // landed on something
             player_zvel = 0;
-            player_canjump = true;
         }
 
         // Apply mouse movements update

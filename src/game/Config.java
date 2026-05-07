@@ -14,26 +14,27 @@ public final class Config {
     public static final int RENDER_WIDTH = 256 * 2;
     public static final int RENDER_HEIGHT = 192 * 2;
     public static final int DELAY = 8; // 1000/FPS
-
-    // --------------------------
-    // ALL RAYCAST settings
-    // --------------------------
-    public static final double FOV_HORIZONTAL = Math.toRadians(70);
-    public static final int POV_DIST = -0; // distance behind camera to start light beams
+    public static final double EDGE_WIDTH = 0.02;
 
     // --------------------------
     // ALL WORLD settings
     // --------------------------
-    public static final int WORLD_VOXELS_X = 32;
-    public static final int WORLD_VOXELS_Y = 32;
+    public static final int WORLD_VOXELS_X = 128;
+    public static final int WORLD_VOXELS_Y = 128;
     public static final int WORLD_VOXELS_Z = 16;
     public static final int WORLD_SEED = 53;
 
     // --------------------------
-    // RENDERING tuning
+    // ALL RAYCAST settings
     // --------------------------
     public static final int MAX_DDA_STEPS = WORLD_VOXELS_X + WORLD_VOXELS_Y + WORLD_VOXELS_Z + 2;
     public static final double MAX_DDA_TIME = 50.0;
+    public static final double FOV_HORIZONTAL = Math.toRadians(70);
+    public static final int POV_DIST = -0; // distance behind camera to start light beams
+
+    // --------------------------
+    // RENDERING tuning
+    // --------------------------
     public static final double FOG_DISTANCE = 50.0;     // world units at which fog reaches max
     public static final int SKY_COLOR_R = 135;
     public static final int SKY_COLOR_G = 206;
@@ -43,8 +44,8 @@ public final class Config {
     // INPUT settings
     // --------------------------
     public static final double WALK_SPEED = 3.0;        // world units per second
-    public static final double JUMP_STRENGTH = 7.0;        // world units per second
-    public static final double GRAVITY = 2*9.8;
+    public static final double JUMP_STRENGTH = 9.8;        // world units per second
+    public static final double GRAVITY = 3*9.8;
     public static final double TERM_ZVEL = -12;// world units per second
     public static final double BB_HORIZONTAL_HALF = 0.3;
     public static final double BB_VERTICAL_DOWN = 1.5;
@@ -56,9 +57,6 @@ public final class Config {
     // INITIAL states
     // --------------------------
 
-    public static final double START_X = 4.0;
-    public static final double START_Y = 4.0;
-    public static final double START_Z = 14.0;
     public static final double START_THETA = 0.0;
     public static final double START_EPSILON = 0.0;
 }

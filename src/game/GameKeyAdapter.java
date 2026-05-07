@@ -27,9 +27,9 @@ public class GameKeyAdapter extends java.awt.event.KeyAdapter {
                 panel.player_dforward = Math.clamp(panel.player_dforward-1, -1, 0);
                 break;
             case KeyEvent.VK_SPACE:
-                if (panel.player_canjump) {
+                if (panel.grounded) {
                     panel.player_zvel = JUMP_STRENGTH;
-                    panel.player_canjump = false;
+                    panel.grounded = false;
                 }
                 break;
             case KeyEvent.VK_SHIFT:
