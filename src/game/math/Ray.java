@@ -1,4 +1,4 @@
-package game;
+package game.math;
 
 public class Ray {
     public double[] dir;

@@ -1,4 +1,6 @@
-package game;
+package game.input;
+
+import game.GamePanel;
 
 import java.awt.event.MouseEvent;
 

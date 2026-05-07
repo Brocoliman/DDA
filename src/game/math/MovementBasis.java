@@ -1,15 +1,15 @@
-package game;
+package game.math;
 
 /*
 CameraBasis is a camera SNAPSHOT
  */
 
 public class MovementBasis {
-    final Vec3 forward;
-    final Vec3 right;
-    final Vec3 up;
+    public final Vec3 forward;
+    public final Vec3 right;
+    public final Vec3 up;
 
-    MovementBasis(double theta) {
+    public MovementBasis(double theta) {
         this.forward = new Vec3(
                 Math.cos(theta),
                 Math.sin(theta),

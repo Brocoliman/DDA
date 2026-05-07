@@ -1,4 +1,4 @@
-package game;
+package game.math;
 import java.lang.Math;
 
 /*
@@ -6,11 +6,11 @@ CameraBasis is a camera SNAPSHOT
  */
 
 public class CameraBasis {
-    final Vec3 forward;
-    final Vec3 right;
-    final Vec3 up;
+    public final Vec3 forward;
+    public final Vec3 right;
+    public final Vec3 up;
 
-    CameraBasis(double theta, double epsilon) {
+    public CameraBasis(double theta, double epsilon) {
         this.forward = new Vec3(
                 Math.cos(theta)*Math.cos(epsilon),
                 Math.sin(theta)*Math.cos(epsilon),

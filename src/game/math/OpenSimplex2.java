@@ -1,4 +1,4 @@
-package game;
+package game.math;
 
 /**
  * K.jpg's OpenSimplex 2, faster variant

@@ -25,6 +25,7 @@ A voxel-based 3D engine written in pure Java using DDA (Digital Differential Ana
 
 ## Version History
 
+- **V1.3.3** - Refactor file structure and separate WorldGenerator, Player, Renderer
 - **V1.3.2** - Increased world size (32 -> 128), random spawn position
 - **V1.3.1** - Function argument type fix
 - **V1.3** - AABB collision detection
@@ -35,7 +36,7 @@ A voxel-based 3D engine written in pure Java using DDA (Digital Differential Ana
 
 ## Requirements
 
-- Java 21+ (uses `Math.clamp`)
+- Java 21+ (`Math.clamp`)
 
 ## Running
 

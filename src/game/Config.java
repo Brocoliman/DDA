@@ -21,8 +21,9 @@ public final class Config {
     // --------------------------
     public static final int WORLD_VOXELS_X = 128;
     public static final int WORLD_VOXELS_Y = 128;
-    public static final int WORLD_VOXELS_Z = 16;
+    public static final int WORLD_VOXELS_Z = 64;
     public static final int WORLD_SEED = 53;
+    public static final int MIN_TERRAIN_HEIGHT = WORLD_VOXELS_Z/2;
 
     // --------------------------
     // ALL RAYCAST settings
@@ -45,7 +46,7 @@ public final class Config {
     // --------------------------
     public static final double WALK_SPEED = 3.0;        // world units per second
     public static final double JUMP_STRENGTH = 9.8;        // world units per second
-    public static final double GRAVITY = 3*9.8;
+    public static final double GRAVITY = 5*9.8;
     public static final double TERM_ZVEL = -12;// world units per second
     public static final double BB_HORIZONTAL_HALF = 0.3;
     public static final double BB_VERTICAL_DOWN = 1.5;
@@ -56,7 +57,6 @@ public final class Config {
     // --------------------------
     // INITIAL states
     // --------------------------
-
     public static final double START_THETA = 0.0;
     public static final double START_EPSILON = 0.0;
 }

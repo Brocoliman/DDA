@@ -1,35 +1,37 @@
-package game;
+package game.input;
+
+import game.Player;
 
 import java.awt.event.KeyEvent;
 
 import static game.Config.JUMP_STRENGTH;
 
 public class GameKeyAdapter extends java.awt.event.KeyAdapter {
-    private final GamePanel panel;
+    private final Player player;
 
-    public GameKeyAdapter(GamePanel panel) {
-        this.panel = panel;
+    public GameKeyAdapter(Player player) {
+        this.player = player;
     }
 
     @Override
     public void keyPressed(KeyEvent e) {
         switch (e.getKeyCode()) {
             case KeyEvent.VK_A:
-                panel.player_dright = Math.clamp(panel.player_dright-1, -1, 0);
+                player.pdright = Math.clamp(player.pdright -1, -1, 0);
                 break;
             case KeyEvent.VK_D:
-                panel.player_dright = Math.clamp(panel.player_dright+1, 0, 1);
+                player.pdright = Math.clamp(player.pdright +1, 0, 1);
                 break;
             case KeyEvent.VK_W:
-                panel.player_dforward = Math.clamp(panel.player_dforward+1, 0, 1);
+                player.pdforward = Math.clamp(player.pdforward +1, 0, 1);
                 break;
             case KeyEvent.VK_S:
-                panel.player_dforward = Math.clamp(panel.player_dforward-1, -1, 0);
+                player.pdforward = Math.clamp(player.pdforward -1, -1, 0);
                 break;
             case KeyEvent.VK_SPACE:
-                if (panel.grounded) {
-                    panel.player_zvel = JUMP_STRENGTH;
-                    panel.grounded = false;
+                if (player.grounded) {
+                    player.zvel = JUMP_STRENGTH;
+                    player.grounded = false;
                 }
                 break;
             case KeyEvent.VK_SHIFT:
@@ -42,16 +44,16 @@ public class GameKeyAdapter extends java.awt.event.KeyAdapter {
     public void keyReleased(KeyEvent e) {
         switch (e.getKeyCode()) {
             case KeyEvent.VK_D:
-                panel.player_dright = Math.clamp(panel.player_dright - 1, -1, 0);
+                player.pdright = Math.clamp(player.pdright - 1, -1, 0);
                 break;
             case KeyEvent.VK_A:
-                panel.player_dright = Math.clamp(panel.player_dright + 1, 0, 1);
+                player.pdright = Math.clamp(player.pdright + 1, 0, 1);
                 break;
             case KeyEvent.VK_S:
-                panel.player_dforward = Math.clamp(panel.player_dforward + 1, 0, 1);
+                player.pdforward = Math.clamp(player.pdforward + 1, 0, 1);
                 break;
             case KeyEvent.VK_W:
-                panel.player_dforward = Math.clamp(panel.player_dforward - 1, -1, 0);
+                player.pdforward = Math.clamp(player.pdforward - 1, -1, 0);
                 break;
         }
     }

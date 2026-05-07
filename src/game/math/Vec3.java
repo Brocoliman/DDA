@@ -1,4 +1,4 @@
-package game;
+package game.math;
 
 public class Vec3 {
     public final double x, y, z;
