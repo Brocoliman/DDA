@@ -23,19 +23,6 @@ A voxel-based 3D engine written in pure Java using DDA (Digital Differential Ana
 | Right Click | Place block |
 | Mouse | Look around |
 
-## Configuration
-
-Key settings in `Config.java`:
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `WINDOW_WIDTH/HEIGHT` | 1024x768 | Window size |
-| `RENDER_WIDTH/HEIGHT` | 512x384 | Internal render resolution |
-| `WORLD_VOXELS_X/Y/Z` | 128x128x16 | World dimensions |
-| `FOV_HORIZONTAL` | 70 degrees | Field of view |
-| `WALK_SPEED` | 3.0 | Movement speed (units/sec) |
-| `FOG_DISTANCE` | 50.0 | Distance fog max distance |
-
 ## Version History
 
 - **V1.3.2** - Increased world size (32 -> 128), random spawn position
