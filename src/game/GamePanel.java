@@ -108,7 +108,7 @@ public class GamePanel extends JPanel implements ActionListener {
             int delta_x = mouse_pxy.x - window_centerx;
             int delta_y = mouse_pxy.y - window_centery;
             player.theta -= delta_x * MOUSE_SENSITIVITY_X;
-            player.eps -= delta_y * MOUSE_SENSITIVITY_Y;
+            player.eps = Math.clamp(player.eps-delta_y * MOUSE_SENSITIVITY_Y, -Math.PI/2, Math.PI/2);
             robot.mouseMove(window_centerx,window_centery);
         }
         firstMouseRead = false;

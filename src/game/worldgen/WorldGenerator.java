@@ -34,7 +34,6 @@ public class WorldGenerator {
     public void generate() {
         generateTerrain();
         carveCaves();
-        placePlayerSpawn();
     }
 
     private void generateTerrain() {
@@ -85,8 +84,4 @@ public class WorldGenerator {
         }
     }
 
-
-    private void placePlayerSpawn() {
-        // random start position
-    }
 }
