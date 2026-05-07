@@ -37,15 +37,12 @@ public class World {
             }
         }
     }
-    public boolean isSolid(double x, double y, double z) {
-        int ix = (int)Math.floor(x);
-        int iy = (int)Math.floor(y);
-        int iz = (int)Math.floor(z);
-        if (ix < 0 || iy < 0 || iz < 0 ||
-                ix >= voxels_x || iy >= voxels_y || iz >= voxels_z) {
+    public boolean isSolid(int x, int y, int z) {
+        if (x < 0 || y < 0 || z < 0 ||
+                x >= voxels_x || y >= voxels_y || z >= voxels_z) {
             return false;  // outside world = not solid (player can fly out)
         }
-        return map[iz][iy][ix] != 0;
+        return map[z][y][x] != 0;
     }
     public void placeBlock(Ray ray, int block_type) {
         int[] voxel = ray.hit_block;
