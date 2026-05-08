@@ -10,10 +10,6 @@ import java.util.Arrays;
 import java.util.stream.IntStream;
 
 import static game.Config.*;
-import static game.Config.MAX_DDA_TIME;
-import static game.Config.WORLD_VOXELS_X;
-import static game.Config.WORLD_VOXELS_Y;
-import static game.Config.WORLD_VOXELS_Z;
 
 public class Renderer {
 
@@ -37,7 +33,7 @@ public class Renderer {
     }
 
     // Raycasting
-    public Ray traceRay(double[] dir, double[] startPos, double[] startVoxelPos, Ray out) {
+    public Ray traceRay(double[] dir, double[] startPos, double[] startVoxelPos, double maxTime, Ray out) {
         double[] t = tlT.get();
         double[] dt = tlDt.get();
         double[] m = tlM.get();
@@ -103,7 +99,7 @@ public class Renderer {
 
             // Check if voxel is outside render distance
             // if outside, then stop trajectory
-            if (t_hit > MAX_DDA_TIME) break;
+            if (t_hit > maxTime) break;
 
             // Check if voxel is in the map
             // if outside, don't check in the map
@@ -137,17 +133,20 @@ public class Renderer {
     public void drawPixel(Ray ray, int row, int col, Ray targetRay) {
         int rgb;
         if (ray.hit) {
-            int shade;
+            // Determine lightness
+            double lightness;
             if (ray.axis == 0) {
-                shade = 170;
+                lightness = 170.0/255;
             } else if (ray.axis == 1) {
-                shade = 213;
+                lightness = 213.0/255;
             } else {
-                shade = 255;
+                lightness = 255.0/255;
             }
+
+            // Determine fog factor
             double fogFactor = Math.clamp(ray.t_hit / FOG_DISTANCE, 0.0, 1.0);
 
-            int r, g, b;
+            // Determine outline
             boolean isOutline = false;
             if (Arrays.equals(ray.hit_block, targetRay.hit_block)) {
                 for (int axis = 0; axis < 3; axis++) {
@@ -160,10 +159,16 @@ public class Renderer {
                 }
             }
 
+            // Determine block type
+            Block block = Block.byId(world.map[ray.hit_block[2]][ray.hit_block[1]][ray.hit_block[0]]);
+            int r, g, b;
+
             if (isOutline) {
                 r = 0; g = 0; b = 0;
             } else {
-                r = g = b = shade;
+                r = (int)(lightness * block.color.getRed());
+                g = (int)(lightness * block.color.getGreen());
+                b = (int)(lightness * block.color.getBlue());
             }
 
             r = (int)(r * (1 - fogFactor) + 135 * fogFactor);
@@ -220,7 +225,7 @@ public class Renderer {
 
                 // Find ray hit and draw
                 Ray ray = tlRay.get();
-                traceRay(dir, startPos, startVoxelPos, ray);
+                traceRay(dir, startPos, startVoxelPos, MAX_DDA_TIME_RENDER, ray);
                 drawPixel(ray, row, col, targetRay);
             }
         });
@@ -241,10 +246,11 @@ public class Renderer {
 
         g.setFont(new Font("Monospaced", Font.PLAIN, 14));
         String[] lines = {
-                String.format("X: %.2f  Y: %.2f  Z: %.2f ZVel: %.2f", px, py, pz, pzv),
+                String.format("X: %.2f  Y: %.2f  Z: %.2f ZVel: %.2f Seed: %d", px, py, pz, pzv, WORLD_SEED),
                 String.format("Theta: %.2f  Epsilon: %.2f", Math.toDegrees(theta), Math.toDegrees(epsilon)),
                 String.format("FPS: %.1f", panel.currentFps),
-                String.format("Target: %d %d %d", targetRay.hit_block[0], targetRay.hit_block[1], targetRay.hit_block[2])
+                String.format("Target: %d %d %d Type: %s", targetRay.hit_block[0], targetRay.hit_block[1], targetRay.hit_block[2],
+                        targetRay.hit?(Block.byId(world.map[targetRay.hit_block[2]][targetRay.hit_block[1]][targetRay.hit_block[0]]).name):"Air")
         };
 
         for (int i = 0; i < lines.length; i++) {

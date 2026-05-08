@@ -32,11 +32,11 @@ public class WorldGenerator {
     }
 
     public void generate() {
-        generateTerrain();
+        generateTerrainByHeightMap();
         carveCaves();
     }
 
-    private void generateTerrain() {
+    private void generateTerrainByHeightMap() {
         startPos = new double[3];
         startPos[0] = (int)((Math.clamp(random.nextGaussian(), -1, 1)+1)/2*voxels_x);
         startPos[1] = (int)((Math.clamp(random.nextGaussian(), -1, 1)+1)/2*voxels_y);
@@ -52,15 +52,13 @@ public class WorldGenerator {
                 double wx = x_unit + warpX;
                 double wy = y_unit + warpY;
 
-                double n = noise2(seed, wx*0.02, wy*0.02) * 0.55    // large rolling hills
-                        + noise2(seed, wx*0.08, wy*0.08) * 0.4      // medium detail
+                double n = noise2(seed, wx*0.02, wy*0.02) * 0.65    // large rolling hills
+                        + noise2(seed, wx*0.08, wy*0.08) * 0.3      // medium detail
                         + noise2(seed, wx*0.32, wy*0.32) * 0.05;    // small bumps
 
                 int height = MIN_TERRAIN_HEIGHT + (int)((n+1)*0.5*(voxels_z-MIN_TERRAIN_HEIGHT));
                 if (x_unit== startPos[0] && y_unit== startPos[1]) startPos[2] = height+1+BB_VERTICAL_DOWN;
-                for (int z_unit = 0; z_unit < height; z_unit++) {
-                    this.map[z_unit][y_unit][x_unit] = 1;
-                }
+                for (int z_unit = 0; z_unit < height; z_unit++) this.map[z_unit][y_unit][x_unit] = 1;
             }
         }
     }

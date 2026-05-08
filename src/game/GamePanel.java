@@ -123,7 +123,7 @@ public class GamePanel extends JPanel implements ActionListener {
         dir[1] = cameraBasis.forward.y;
         dir[2] = cameraBasis.forward.z;
         Ray ray = new Ray();
-        player.targetRay = renderer.traceRay(dir, playerPos, mapPos, ray);
+        player.targetRay = renderer.traceRay(dir, playerPos, mapPos, MAX_DDA_TIME_TARGET, ray);
     }
 
     // --------------------------

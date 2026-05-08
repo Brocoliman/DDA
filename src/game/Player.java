@@ -19,8 +19,8 @@ public class Player {
     public Ray targetRay;
 
     Player(World world) {
-        this.theta = START_THETA;
-        this.eps = START_EPSILON;
+        this.theta = 0;
+        this.eps = 0;
         this.px = world.startPos[0];
         this.py = world.startPos[1];
         this.pz = world.startPos[2];
