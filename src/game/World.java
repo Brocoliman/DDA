@@ -5,6 +5,7 @@ import game.math.Ray;
 import game.worldgen.WorldGenerator;
 
 public class World {
+    public Player player;
     public final int[][][] map;
     public final int voxels_x;
     public final int voxels_y;
@@ -19,6 +20,10 @@ public class World {
         this.voxels_y = voxels_y;
         this.voxels_z = voxels_z;
         this.map = new int[voxels_z][voxels_y][voxels_x];
+    }
+
+    public void bindPlayer(Player p) {
+        player = p;
     }
 
     public void initialize() {
@@ -38,10 +43,14 @@ public class World {
         int axis = ray.axis;
         double[] dir = ray.dir;
         voxel[axis] -= (dir[axis] > 0) ? 1:-1;
-        map[voxel[2]][voxel[1]][voxel[0]] = block_type;
+        setBlock(voxel, block_type);
+        if(player.wouldCollide(this, player.px, player.py, player.pz)){setBlock(voxel, 0);}
     }
     public void destroyBlock(Ray ray) {
         int[] voxel = ray.hit_block;
-        map[voxel[2]][voxel[1]][voxel[0]] = 0;
+        setBlock(voxel, 0);
+    }
+    public void setBlock(int[] voxel, int block_type) {
+        map[voxel[2]][voxel[1]][voxel[0]] = block_type;
     }
 }

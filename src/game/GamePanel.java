@@ -14,9 +14,9 @@ import static game.Config.*;
 
 public class GamePanel extends JPanel implements ActionListener {
     // Dependencies
-    private final World world;
-    private final Renderer renderer;
-    private final Player player;
+    public final World world;
+    public final Renderer renderer;
+    public final Player player;
 
     // Timing
     Timer timer;
@@ -39,6 +39,7 @@ public class GamePanel extends JPanel implements ActionListener {
         world.initialize();
         this.renderer = new Renderer(world);
         this.player = new Player(world);
+        world.bindPlayer(player);
 
         this.setPreferredSize(new Dimension(WINDOW_WIDTH, WINDOW_HEIGHT)); // minimum size for the component to display correctly
         this.setFocusable(true);

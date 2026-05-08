@@ -31,6 +31,7 @@ A voxel-based 3D engine written in pure Java using DDA (Digital Differential Ana
   - V1.3.3 - Refactor file structure and separate WorldGenerator, Player, Renderer
   - V1.3.4 - Clamp player epsilon between -90 to 90
   - V1.3.5 - Block types
+  - V1.3.6 - Prevent block placement if within player
 - **V1.2** - Basic procedural world generation
   - V1.2.1 - Optimizations for improved FPS at lower FOV
 - **V1.1** - Block placing and breaking
