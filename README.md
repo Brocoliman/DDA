@@ -1,6 +1,7 @@
 # DDA Voxel Engine
 
 A voxel-based 3D engine written in pure Java using DDA (Digital Differential Analyzer) raycasting for rendering.
+Rewrite of an earlier attempt ([3d-raycast] (https://github.com/Brocoliman/3d-raycast))
 
 ## Features
 
